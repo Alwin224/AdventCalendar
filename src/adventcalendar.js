@@ -5,6 +5,7 @@ import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import GUI from 'lil-gui';
 import coffeeSmokeVertexShader from './shaders/coffeeSmoke/vertex.glsl'
 import coffeeSmokeFragmentShader from './shaders/coffeeSmoke/fragment.glsl'
+import { color } from 'three/tsl';
 
 //scene
 const scene = new THREE.Scene()
@@ -107,7 +108,19 @@ perlinTexture.wrapT = THREE.RepeatWrapping
 perlinTexture.transparent = true
 perlinTexture.depthWrite = false
 
+//aurora borealis
+//geometry
+const auroraBorealisGeometry = new THREE.PlaneGeometry(20, 4, 16, 64)
+auroraBorealisGeometry.translate(0, 1, -4)
 
+//mesh
+const auroraBorealisMesh = new THREE.MeshBasicMaterial({
+    color: 'cyan',
+    side: THREE.DoubleSide,
+})
+
+const auroraBorealisMaterial = new THREE.Mesh(auroraBorealisGeometry, auroraBorealisMesh)
+scene.add(auroraBorealisMaterial)
 //snow
 //geometry
 const snowTexture = textureLoader.load('./snow.png')
