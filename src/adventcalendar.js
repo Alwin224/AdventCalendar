@@ -5,7 +5,8 @@ import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import GUI from 'lil-gui';
 import coffeeSmokeVertexShader from './shaders/coffeeSmoke/vertex.glsl'
 import coffeeSmokeFragmentShader from './shaders/coffeeSmoke/fragment.glsl'
-import { color } from 'three/tsl';
+import auroraBorealisVertexShader from './shaders/auroraBorealis/vertex.glsl'
+import auroraBorealisFragmentShader from './shaders/auroraBorealis/fragment.glsl'
 
 //scene
 const scene = new THREE.Scene()
@@ -45,6 +46,7 @@ scene.add(camera)
 const controls = new OrbitControls(camera, canvas)
 controls.enableDamping = true
 controls.enablePan = false
+controls.enableRotate = false
 controls.maxDistance = 3.5
 
 //renderer
@@ -102,30 +104,47 @@ gltfLoader.setDRACOLoader(dracoLoader)
 
 //perlinTexture
 //have to make sure the UVs are good in blender
-const perlinTexture = textureLoader.load('./perlin.png')
+const perlinTexture = textureLoader.load('./perlin.png', (texture) =>{
+
 perlinTexture.wrapS = THREE.RepeatWrapping
 perlinTexture.wrapT = THREE.RepeatWrapping
 perlinTexture.transparent = true
 perlinTexture.depthWrite = false
 
-//aurora borealis
-//geometry
-const auroraBorealisGeometry = new THREE.PlaneGeometry(20, 4, 16, 64)
-auroraBorealisGeometry.translate(0, 1, -4)
-
-//mesh
-const auroraBorealisMesh = new THREE.MeshBasicMaterial({
-    color: 'cyan',
-    side: THREE.DoubleSide,
 })
 
-const auroraBorealisMaterial = new THREE.Mesh(auroraBorealisGeometry, auroraBorealisMesh)
-scene.add(auroraBorealisMaterial)
+
+//aurora borealis
+//geometry
+//first plane was 20, 4
+const auroraBorealisGeometry = new THREE.PlaneGeometry(12, 4, 32, 32)
+auroraBorealisGeometry.translate(0, 1, -2.25)
+
+
+
+//mesh
+const auroraBorealisMaterial = new THREE.ShaderMaterial({
+    //wireframe: true,
+    transparent: true,
+    side: THREE.DoubleSide,
+    vertexShader: auroraBorealisVertexShader,
+    fragmentShader: auroraBorealisFragmentShader,
+
+    uniforms:{
+        uFrequency: {value: new THREE.Vector2(100, 50)},
+        uTime: {value: 0},
+        uPerlinTexture: {value: perlinTexture}
+    }
+})
+
+const auroraBorealisMesh = new THREE.Mesh(auroraBorealisGeometry, auroraBorealisMaterial)
+auroraBorealisMesh.rotation.z = Math.PI / 1.8; //rotated on the z
+scene.add(auroraBorealisMesh)
 //snow
 //geometry
 const snowTexture = textureLoader.load('./snow.png')
 const particlesGeometry = new THREE.BufferGeometry()
-const count = 5000
+const count = 1000
 const positions = new Float32Array(count * 3)
 
 for (let i = 0; i < count * 3; i++) {
@@ -219,6 +238,8 @@ const tick = () => {
 
     positionAttr.needsUpdate = true
 
+    //Update Aurora Borealis
+    auroraBorealisMaterial.uniforms.uTime.value = elapsedTime
     //Update smoke
     smokeMaterial.uniforms.uTime.value = elapsedTime
     controls.update()
