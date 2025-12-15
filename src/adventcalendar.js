@@ -7,7 +7,7 @@ import coffeeSmokeVertexShader from './shaders/coffeeSmoke/vertex.glsl'
 import coffeeSmokeFragmentShader from './shaders/coffeeSmoke/fragment.glsl'
 import auroraBorealisVertexShader from './shaders/auroraBorealis/vertex.glsl'
 import auroraBorealisFragmentShader from './shaders/auroraBorealis/fragment.glsl'
-import { PI } from 'three/tsl';
+import {gsap} from 'gsap'
 
 //scene
 const scene = new THREE.Scene()
@@ -96,14 +96,58 @@ window.addEventListener('dblclick', () => {
     }
 })
 
+//Overlay
+const overlayGeometry = new THREE.PlaneGeometry(2,2,1, 1)
+const overlayMaterial = new THREE.ShaderMaterial({
+    transparent:true,
+    uniforms: {
+        uAlpha: {value: 1}
+    },
+    vertexShader: `
+    void main()
+    {
+    gl_Position = vec4(position, 1.0);
+    }`,
+    fragmentShader:`
+    uniform float uAlpha;
+    void main(){
+    gl_FragColor = vec4(0.0, 0.0,0.0, uAlpha);
+    }
+    `
+})
+
+const overlay = new THREE.Mesh(overlayGeometry, overlayMaterial)
+scene.add(overlay)
 //textureloader
 const textureLoader = new THREE.TextureLoader()
 
+const loadingBarElement = document.querySelector('.loading-bar')
+//loading Manager
+const loadingManager = new THREE.LoadingManager(
+//loaded
+() =>
+{
+     window.setTimeout(() =>
+        {
+            gsap.to(overlayMaterial.uniforms.uAlpha, { duration: 3, value: 0, delay: 1 })
+
+            loadingBarElement.classList.add('ended')
+            loadingBarElement.style.transform = ''
+        }, 500)
+},
+
+(itemUrl, itemsLoaded, itemsTotal) =>
+{
+    const progressRatio = itemsLoaded/ itemsTotal
+    loadingBarElement.style.transform = `scaleX(${progressRatio})`
+}
+)
+
 //dracoLoader
-const dracoLoader = new DRACOLoader()
+const dracoLoader = new DRACOLoader(loadingManager)
 dracoLoader.setDecoderPath('/draco/')
 //gltfloader
-const gltfLoader = new GLTFLoader()
+const gltfLoader = new GLTFLoader(loadingManager)
 gltfLoader.setDRACOLoader(dracoLoader)
 
 //perlinTexture
