@@ -13,18 +13,39 @@ import {gsap} from 'gsap'
 const scene = new THREE.Scene()
 const canvas = document.querySelector('canvas.webgl')
 
+let model = null
+let floor0group = new THREE.Group()
+let floor1group = new THREE.Group()
+let floor2group = new THREE.Group()
+let floor3group = new THREE.Group()
+let floor4group = new THREE.Group()
 
 //lights
 
-//Hemisphere Light
+// //Hemisphere Light
 const hemisphereLight = new THREE.HemisphereLight(0xACCFFF, 0xDDE7F2, 0.5)
 hemisphereLight.position.set(0, 20, 0)
 scene.add(hemisphereLight)
 
 const directionalLight = new THREE.DirectionalLight(0xB3D9FF, 0.8)
-directionalLight.position.set(5, 10, 7.5)
-scene.add(directionalLight)
+directionalLight.position.set(2,1,12)
+directionalLight.castShadow = true
+directionalLight.shadow.mapSize.width = 1024
+directionalLight.shadow.mapSize.height = 1024
+directionalLight.shadow.radius = 1
+directionalLight.shadow.camera.near = 1
+directionalLight.shadow.camera.far = 12
 
+directionalLight.shadow.camera.left = -3
+directionalLight.shadow.camera.right = 3
+directionalLight.shadow.camera.top = 3
+directionalLight.shadow.camera.bottom = -3
+directionalLight.shadow.bias = -0.0005
+directionalLight.shadow.normalBias = 0.1
+
+scene.add(directionalLight)
+directionalLight.target.position.set(0, 0, 0)
+scene.add(directionalLight.target)
 //light helpers
 const hemisphereLightHelper = new THREE.HemisphereLightHelper(hemisphereLight, 0.2)
 scene.add(hemisphereLightHelper)
@@ -57,6 +78,8 @@ controls.minDistance = 1.5
 const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true }) //antialias smooths the pixels
 renderer.setPixelRatio(window.devicePixelRatio)
 renderer.setSize(window.innerWidth, window.innerHeight)
+renderer.shadowMap.enabled = true
+renderer.shadowMap.type = THREE.PCFSoftShadowMap
 renderer.outputEncoding = THREE.sRGBEncoding //corrects the color encoding
 renderer.toneMapping = THREE.ACESFilmicToneMapping; //Blender style
 renderer.toneMappingExposure = 1.0
@@ -191,6 +214,8 @@ const auroraBorealisMaterial = new THREE.ShaderMaterial({
 
 const auroraBorealisMesh = new THREE.Mesh(auroraBorealisGeometry, auroraBorealisMaterial)
 auroraBorealisMesh.rotation.z = -Math.PI/1.9; //fixed it to be 1.9
+auroraBorealisMesh.castShadow = false
+auroraBorealisMesh.receiveShadow = false
 scene.add(auroraBorealisMesh)
 //snow
 //geometry
@@ -224,6 +249,8 @@ particlesMaterial.alphaTest = 0.01
 //mesh for points snow
 const particles = new THREE.Points(particlesGeometry, particlesMaterial)
 particles.renderOrder = 1 //sets the order of when to render
+particles.castShadow = false
+particles.receiveShadow = false
 scene.add(particles)
 //smokeShaderMaterial
 const smokeMaterial = new THREE.ShaderMaterial({
@@ -241,12 +268,6 @@ const smokeMaterial = new THREE.ShaderMaterial({
  
 })
 
-let model = null
-let floor0group = new THREE.Group()
-let floor1group = new THREE.Group()
-let floor2group = new THREE.Group()
-let floor3group = new THREE.Group()
-let floor4group = new THREE.Group()
 scene.add(floor0group)
 gltfLoader.load('./AdventCalendar.glb',
     (gltf) => {
@@ -257,17 +278,38 @@ gltfLoader.load('./AdventCalendar.glb',
 
         //traverses the model to see if any plane includes the word Smoke
         model.traverse((child) => {
-            if (child.isMesh && child.name.includes("Smoke")) {
+            if(!child.isMesh) return
+            if (child.name.includes("SmokePlane")) {
                 child.material = smokeMaterial
+                child.castShadow = false
+                child.receiveShadow = false
+                return
             }
+
+        if(child.name.includes("Chimney")){
+            child.castShadow = false
+            child.receiveShadow = false
+            return
+        }
+            if(child.name.includes("Floor")){
+                child.castShadow = false
+                child.receiveShadow = true
+                return
+            }
+            child.castShadow = true
+            child.receiveShadow = true
+            
         })
-       //Access a group from blender
-        floor0group = model.getObjectByName("Floor_Zero_E")
-        floor1group = model.getObjectByName("Floor_One_E")
-        floor2group = model.getObjectByName("Floor_Two_E")
-        floor3group = model.getObjectByName("Floor_Three_E")
-        floor4group = model.getObjectByName("Floor_Four_E")
+
+//Access a group from blender
+floor0group = model.getObjectByName("Floor_Zero_E")
+floor1group = model.getObjectByName("Floor_One_E")
+floor2group = model.getObjectByName("Floor_Two_E")
+floor3group = model.getObjectByName("Floor_Three_E")
+floor4group = model.getObjectByName("Floor_Four_E")
    })
+
+
 
 //clock
 const clock = new THREE.Clock()
