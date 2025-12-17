@@ -1,22 +1,21 @@
-*
-{
+* {
     margin: 0;
     padding: 0;
 }
 
 html,
-body{
-    overflow:hidden;
+body {
+    overflow: hidden;
 }
 
-.webgl{
-    position:fixed;
+.webgl {
+    position: fixed;
     top: 0;
     left: 0;
     outline: none;
 }
 
-.loading-bar{
+.loading-bar {
     position: absolute;
     top: 50%;
     width: 100%;
@@ -27,8 +26,54 @@ body{
     transition: transform 0.5s;
 }
 
-.loading-bar.ended{
+.loading-bar.ended {
     transform: scaleX(0);
     transform-origin: 100% 0;
     transition: transform 1.5s ease-in-out;
+}
+
+#informationmodal {
+    width: 400px;
+    height: 400px;
+    border-radius: 10px;
+    position: absolute;
+    float: left;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+}
+
+#buttonWrapper {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    display: flex;
+    gap: 10px;
+}
+
+.fixedButton {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(135deg, rgb(4, 4, 4), rgb(13, 1, 25));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(254, 251, 251, 0.3);
+    transition: all 0.2s ease-in-out;
+}
+
+.fixedButton:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+}
+
+.fixedButton svg {
+    width: 24px;
+    height: 24px;
+    fill: #fff;
 }

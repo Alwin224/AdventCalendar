@@ -7,12 +7,43 @@ import coffeeSmokeVertexShader from './shaders/coffeeSmoke/vertex.glsl'
 import coffeeSmokeFragmentShader from './shaders/coffeeSmoke/fragment.glsl'
 import auroraBorealisVertexShader from './shaders/auroraBorealis/vertex.glsl'
 import auroraBorealisFragmentShader from './shaders/auroraBorealis/fragment.glsl'
-import {gsap} from 'gsap'
+import { gsap } from 'gsap'
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 
 //scene
 const scene = new THREE.Scene()
 const canvas = document.querySelector('canvas.webgl')
 
+
+const audio = document.getElementById('bgAudio');
+const toggleBtn = document.getElementById('audioToggle');
+const playSlash = document.getElementById('playSlash');
+const soundWave = document.getElementById('soundWave');
+
+
+audio.pause();
+playSlash.style.display = 'none';
+soundWave.style.display = 'block';
+
+toggleBtn.addEventListener('click', async () => {
+    try {
+        if (audio.paused) {
+            await audio.play();
+            // Music is now playing - show slash
+            playSlash.style.display = 'block';
+            soundWave.style.display = 'none';
+        } else {
+            audio.pause();
+            // Music paused - hide slash
+            playSlash.style.display = 'none';
+            soundWave.style.display = 'block';
+        }
+    } catch (err) {
+        console.error('Audio error:', err);
+    }
+});
 let model = null
 let floor0group = new THREE.Group()
 let floor1group = new THREE.Group()
@@ -23,15 +54,15 @@ let floor4group = new THREE.Group()
 //lights
 
 // //Hemisphere Light
-const hemisphereLight = new THREE.HemisphereLight(0xACCFFF, 0xDDE7F2, 0.5)
+const hemisphereLight = new THREE.HemisphereLight(0xACCFFF, 0xDDE7F2, 0.1)
 hemisphereLight.position.set(0, 20, 0)
 scene.add(hemisphereLight)
 
-const directionalLight = new THREE.DirectionalLight(0xB3D9FF, 0.8)
-directionalLight.position.set(2,1,12)
+const directionalLight = new THREE.DirectionalLight(0xB3D9FF, 0.3)
+directionalLight.position.set(2, 1, 12)
 directionalLight.castShadow = true
-directionalLight.shadow.mapSize.width = 2048
-directionalLight.shadow.mapSize.height = 2048
+directionalLight.shadow.mapSize.width = 1024
+directionalLight.shadow.mapSize.height = 1024
 directionalLight.shadow.radius = 1
 directionalLight.shadow.camera.near = 1
 directionalLight.shadow.camera.far = 12
@@ -46,17 +77,6 @@ directionalLight.shadow.normalBias = 0.1
 scene.add(directionalLight)
 directionalLight.target.position.set(0, 0, 0)
 scene.add(directionalLight.target)
-//light helpers
-const hemisphereLightHelper = new THREE.HemisphereLightHelper(hemisphereLight, 0.2)
-scene.add(hemisphereLightHelper)
-
-const directionalLightHelper = new THREE.DirectionalLightHelper(directionalLight, 0.2)
-scene.add(directionalLightHelper)
-
-//dat gui
-const gui = new GUI()
-gui.add(hemisphereLight, 'intensity').min(0).max(3).step(0.001).name('hemisphereLightIntensity')
-gui.add(directionalLight, 'intensity').min(0).max(3).step(0.001).name('directionalLightIntensity')
 
 //camera
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100)
@@ -70,8 +90,8 @@ controls.enableDamping = true
 controls.enablePan = false
 //controls.enableRotate = false
 
-controls.minPolarAngle = Math.PI/2;
-controls.maxPolarAngle = Math.PI/2
+controls.minPolarAngle = Math.PI / 2;
+controls.maxPolarAngle = Math.PI / 2
 controls.maxDistance = 3.5
 controls.minDistance = 1.5
 //renderer
@@ -96,43 +116,20 @@ window.addEventListener('resize', () => {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 })
 
-//fullscreen event
-window.addEventListener('dblclick', () => {
-
-    const fullscreenElement = document.fullscreenElement || document.webkitFullscreenElement
-    if (!fullscreenElement) {
-        if (canvas.requestFullscreen) {
-            canvas.requestFullscreen()
-        }
-        else if (canvas.webkitRequestFullScreen()) {
-            canvas.webkitRequestFullScreen()
-        }
-    }
-    else {
-        if (document.exitFullscreen) {
-            canvas.exitFullScreen()
-        }
-        else if (document.webkitExitFullScreen()) {
-            document.webkitExitFullScreen()
-        }
-
-    }
-})
-
 //Overlay
-const overlayGeometry = new THREE.PlaneGeometry(2,2,1, 1)
+const overlayGeometry = new THREE.PlaneGeometry(2, 2, 1, 1)
 const overlayMaterial = new THREE.ShaderMaterial({
-    transparent:true,
-    
+    transparent: true,
+
     uniforms: {
-        uAlpha: {value: 1}
+        uAlpha: { value: 1 }
     },
     vertexShader: `
     void main()
     {
     gl_Position = vec4(position, 1.0);
     }`,
-    fragmentShader:`
+    fragmentShader: `
     uniform float uAlpha;
     void main(){
     gl_FragColor = vec4(0.0, 0.0,0.0, uAlpha);
@@ -150,23 +147,21 @@ scene.add(overlay)
 const loadingBarElement = document.querySelector('.loading-bar')
 //loading Manager
 const loadingManager = new THREE.LoadingManager(
-//loaded
-() =>
-{
-     window.setTimeout(() =>
-        {
+    //loaded
+    () => {
+        window.setTimeout(() => {
             gsap.to(overlayMaterial.uniforms.uAlpha, { duration: 3, value: 0, delay: 1 })
 
             loadingBarElement.classList.add('ended')
             loadingBarElement.style.transform = ''
+            document.getElementById("mainContent").style.display = "block";
         }, 500)
-},
+    },
 
-(itemUrl, itemsLoaded, itemsTotal) =>
-{
-    const progressRatio = itemsLoaded/ itemsTotal
-    loadingBarElement.style.transform = `scaleX(${progressRatio})`
-}
+    (itemUrl, itemsLoaded, itemsTotal) => {
+        const progressRatio = itemsLoaded / itemsTotal
+        loadingBarElement.style.transform = `scaleX(${progressRatio})`
+    }
 )
 
 //textureloader
@@ -180,12 +175,12 @@ gltfLoader.setDRACOLoader(dracoLoader)
 
 //perlinTexture
 //have to make sure the UVs are good in blender
-const perlinTexture = textureLoader.load('./perlin.png', (texture) =>{
+const perlinTexture = textureLoader.load('./perlin.png', (texture) => {
 
-perlinTexture.wrapS = THREE.RepeatWrapping
-perlinTexture.wrapT = THREE.RepeatWrapping
-perlinTexture.transparent = true
-perlinTexture.depthWrite = false
+    perlinTexture.wrapS = THREE.RepeatWrapping
+    perlinTexture.wrapT = THREE.RepeatWrapping
+    perlinTexture.transparent = true
+    perlinTexture.depthWrite = false
 
 })
 
@@ -195,9 +190,6 @@ perlinTexture.depthWrite = false
 //first plane was 20, 4
 const auroraBorealisGeometry = new THREE.PlaneGeometry(20, 8, 32, 32)
 auroraBorealisGeometry.translate(0, 1, -2.25)
-
-
-
 //mesh
 const auroraBorealisMaterial = new THREE.ShaderMaterial({
     transparent: true,
@@ -205,15 +197,15 @@ const auroraBorealisMaterial = new THREE.ShaderMaterial({
     vertexShader: auroraBorealisVertexShader,
     fragmentShader: auroraBorealisFragmentShader,
 
-    uniforms:{
-        uFrequency: {value: new THREE.Vector2(100, 50)},
-        uTime: {value: 0},
-        uPerlinTexture: {value: perlinTexture}
+    uniforms: {
+        uFrequency: { value: new THREE.Vector2(100, 50) },
+        uTime: { value: 0 },
+        uPerlinTexture: { value: perlinTexture }
     }
 })
 
 const auroraBorealisMesh = new THREE.Mesh(auroraBorealisGeometry, auroraBorealisMaterial)
-auroraBorealisMesh.rotation.z = -Math.PI/1.9; //fixed it to be 1.9
+auroraBorealisMesh.rotation.z = -Math.PI / 1.9; //fixed it to be 1.9
 auroraBorealisMesh.castShadow = false
 auroraBorealisMesh.receiveShadow = false
 scene.add(auroraBorealisMesh)
@@ -264,11 +256,10 @@ const smokeMaterial = new THREE.ShaderMaterial({
     },
     side: THREE.DoubleSide,
     transparent: true,
-    depthWrite:false,
- 
+    depthWrite: false,
+
 })
 
-scene.add(floor0group)
 gltfLoader.load('./AdventCalendar.glb',
     (gltf) => {
         model = gltf.scene
@@ -276,9 +267,8 @@ gltfLoader.load('./AdventCalendar.glb',
         model.position.set(0, -1, 0)
         scene.add(model)
 
-        //traverses the model to see if any plane includes the word Smoke
         model.traverse((child) => {
-            if(!child.isMesh) return
+            if (!child.isMesh) return
             if (child.name.includes("SmokePlane")) {
                 child.material = smokeMaterial
                 child.castShadow = false
@@ -286,30 +276,41 @@ gltfLoader.load('./AdventCalendar.glb',
                 return
             }
 
-        if(child.name.includes("Chimney")){
-            child.castShadow = false
-            child.receiveShadow = false
-            return
-        }
-            if(child.name.includes("Floor")){
+            if (child.name.includes("Chimney")) {
+                child.castShadow = false
+                child.receiveShadow = false
+                return
+            }
+            if (child.name.includes("Floor")) {
                 child.castShadow = false
                 child.receiveShadow = true
                 return
             }
             child.castShadow = true
             child.receiveShadow = true
-            
+            if (child.material.emissive) {
+                child.material.emissiveIntensity = 2
+            }
         })
 
-//Access a group from blender
-floor0group = model.getObjectByName("Floor_Zero_E")
-floor1group = model.getObjectByName("Floor_One_E")
-floor2group = model.getObjectByName("Floor_Two_E")
-floor3group = model.getObjectByName("Floor_Three_E")
-floor4group = model.getObjectByName("Floor_Four_E")
-   })
+        //Access a group from blender
+        floor0group = model.getObjectByName("Floor_Zero_E")
+        floor1group = model.getObjectByName("Floor_One_E")
+        floor2group = model.getObjectByName("Floor_Two_E")
+        floor3group = model.getObjectByName("Floor_Three_E")
+        floor4group = model.getObjectByName("Floor_Four_E")
+    })
 
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
 
+const bloomPass = new UnrealBloomPass(
+    new THREE.Vector2(window.innerWidth, window.innerHeight),
+    0.6,   //strength
+    0.4,   //radius
+    0.3    //threshold
+);
+composer.addPass(bloomPass);
 
 //clock
 const clock = new THREE.Clock()
@@ -320,15 +321,15 @@ const tick = () => {
     const elapsedTime = clock.getElapsedTime()
 
     //rotate objects
-     if(floor0group && floor2group && floor4group){
-            floor0group.rotation.y += 0.001
-            floor2group.rotation.y += 0.001
-            floor4group.rotation.y += 0.001
-        }
-    if(floor1group && floor3group){
-            floor1group.rotation.y -= 0.001
-            floor3group.rotation.y -= 0.001
-        }
+    if (floor0group && floor2group && floor4group) {
+        floor0group.rotation.y += 0.001
+        floor2group.rotation.y += 0.001
+        floor4group.rotation.y += 0.001
+    }
+    if (floor1group && floor3group) {
+        floor1group.rotation.y -= 0.001
+        floor3group.rotation.y -= 0.001
+    }
 
     //update snow
     const positionAttr = particlesGeometry.getAttribute('position')
@@ -349,8 +350,6 @@ const tick = () => {
             posArray[i3 + 1] = (Math.random() - 0.5) * 7 //give a random y position
             posArray[i3 + 2] = (Math.random() - 0.5) * 7 //give a random z position
         }
-
-        //TODO: reset position if the snow position is equal to any of the glb objects 
     }
 
     positionAttr.needsUpdate = true
@@ -359,8 +358,11 @@ const tick = () => {
     auroraBorealisMaterial.uniforms.uTime.value = elapsedTime
     //Update smoke
     smokeMaterial.uniforms.uTime.value = elapsedTime
+
     controls.update()
     renderer.render(scene, camera)
+    //update bloom
+    composer.render()
     requestAnimationFrame(tick)
 }
 
